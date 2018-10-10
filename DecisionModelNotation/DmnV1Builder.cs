@@ -138,16 +138,16 @@ namespace DecisionModelNotation
                     id = string.Concat("LiteralExpression_", output.Key),
                 };
 
-                //rule.Item = output.Value is double ? output.Value.ToString() : output.Value;
-                if (output.Value is Boolean || output.Value is double)
-                {
-                    rule.Item = output.Value.ToString();
-                }
-                else
-                {
-                    rule.Item = output.Value;
-                }
-
+                ////rule.Item = output.Value is double ? output.Value.ToString() : output.Value;
+                //if (output.Value is Boolean || output.Value is double)
+                //{
+                //    rule.Item = output.Value.ToString();
+                //}
+                //else
+                //{
+                //    rule.Item = output.Value;
+                //}
+                rule.Item = GetValueParse(output.Value.ToString());
                 outputsRules.Add(rule);
             }
 
@@ -161,12 +161,10 @@ namespace DecisionModelNotation
             {
                 var value = string.IsNullOrEmpty(input.Value?.ToString()) ? "" : input.Value.ToString();
 
-                var valueParse = GetValueParse(value);
-
                 var rule = new tUnaryTests()
                 {
                     id = input.Key,
-                    text = valueParse
+                    text = GetValueParse(value)
                 };
 
                 inputsRules.Add(rule);
@@ -176,8 +174,8 @@ namespace DecisionModelNotation
 
         private string GetValueParse(string cellValue)
         {
-            var regex = Regex.Match(cellValue, @"^[<,>,=]?[=]?\s?(?<number>\d+(\.\d+)?)$");
-            var regex2 = Regex.Match(cellValue, @"^[\[,\],]\s?(?<range1>\d+(\.\d+)?).{2}?(?<range2>\d+(\.\d+)?)[\[,\]]$");
+            var regex = DmnServices.GetComparisonNumber(cellValue);
+            var regex2 = DmnServices.GetRangeNumber(cellValue);
 
             if (int.TryParse(cellValue, out var intType)) return intType.ToString();
             if (long.TryParse(cellValue, out var longType)) return longType.ToString();
@@ -185,12 +183,19 @@ namespace DecisionModelNotation
             if (bool.TryParse(cellValue, out var booleanType)) return booleanType.ToString().ToLower();
             var values = cellValue.Split(";");
             string newCellValue = cellValue;
-            if (values != null && values.Any() && !regex.Success && !regex2.Success && !string.IsNullOrEmpty(newCellValue))
+            if (values != null && values.Any() && regex==null && regex2==null && !string.IsNullOrEmpty(newCellValue))
             {
                 newCellValue = string.Empty;
-                for (int i = 0; i < values.Count(); i++)
+                if (cellValue.StartsWith("\"")&& cellValue.EndsWith("\""))
                 {
-                    newCellValue = i == 0 ? string.Concat("\"", values[i], "\"") : string.Concat(newCellValue, ",", "\"", values[i], "\"");
+                    newCellValue = cellValue;
+                }
+                else
+                {
+                    for (int i = 0; i < values.Count(); i++)
+                    {
+                        newCellValue = i == 0 ? string.Concat("\"", values[i], "\"") : string.Concat(newCellValue, ",", "\"", values[i], "\"");
+                    }
                 }
             }
 

@@ -38,7 +38,7 @@ namespace DecisionModelNotation
                     var inputId = inputValue.Value;
                     var inputLable = inputValue.Key;
 
-                    if (string.IsNullOrEmpty(inputId))
+                    if (String.IsNullOrEmpty(inputId))
                     {
                         inputId = Regex.Replace(inputLable, @"\s+", "");
                         inputId = inputId.Length <= 10 ? inputId : inputId.Substring(0, 10);
@@ -50,8 +50,8 @@ namespace DecisionModelNotation
 
                         inputExpression = new tLiteralExpression()
                         {
-                            id = string.Concat("exp_", inputId),
-                            label = string.Concat("label_", inputId),
+                            id = String.Concat("exp_", inputId),
+                            label = String.Concat("label_", inputId),
                             Item = inputId
                         }
                     };
@@ -72,14 +72,14 @@ namespace DecisionModelNotation
                     var outputId = output.Value;
                     var outputLabel = output.Key;
 
-                    if (string.IsNullOrEmpty(outputId))
+                    if (String.IsNullOrEmpty(outputId))
                     {
                         outputId = Regex.Replace(outputLabel, @"\s+", "");
                         outputId = outputId.Length <= 10 ? outputId : outputId.Substring(0, 10);
                     }
                     var dmnOutputClause = new tOutputClause()
                     {
-                        id = string.Concat(outputId, "_Id"),
+                        id = String.Concat(outputId, "_Id"),
                         label = outputLabel,
                         name = outputId,
                     };
@@ -102,6 +102,18 @@ namespace DecisionModelNotation
                 resultinMessage = null;
             }
             return resultinMessage;
+        }
+
+        public static string GetComparisonNumber(string cellValue)
+        {
+            var regex = Regex.Match(cellValue, @"^[<,>][=]?\s?(?<number>\d+[\.]?(\d+)?)$");
+            return regex.Success ? regex.Groups["number"].Value : null;
+        }
+
+        public static string[] GetRangeNumber(string cellValue)
+        {
+            var regex = Regex.Match(cellValue, @"^[\[,\],]\s?(?<range1>\d+(\.\d+)?).{2}?(?<range2>\d+(\.\d+)?)[\[,\]]$");
+            return regex.Success ? new[] { regex.Groups["range1"].Value, regex.Groups["range2"].Value } : null;
         }
     }
 }
