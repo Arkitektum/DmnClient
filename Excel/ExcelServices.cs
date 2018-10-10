@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using DecisionModelNotation;
 using DecisionModelNotation.Shema;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
@@ -342,22 +343,24 @@ namespace Excel
             return type;
         }
 
+
+
         private string ParseCellValue(object cellValue)
         {
-            if (cellValue == null|| string.IsNullOrEmpty(cellValue.ToString())) return string.Empty;
+            if (cellValue == null || string.IsNullOrEmpty(cellValue.ToString())) return string.Empty;
             //if (string.IsNullOrEmpty(cellValue.ToString()))return String.Empty;
-            var regex = Regex.Match(cellValue?.ToString(), @"^[<,>,=]?\s?(?<number>\d+(\.\d+)?)$");
-            string cellValueString = regex.Success ? regex.Groups["number"].ToString() : cellValue.ToString();
 
-            var regex2 = Regex.Match(cellValue?.ToString(), @"^[\[,\],]\s?(?<range1>\d+(\.\d+)?).{2}?(?<range2>\d+(\.\d+)?)[\[,\]]$");
-            if (regex2.Success)
+            string cellValueString = DmnServices.GetComparisonNumber(cellValue.ToString()) ?? cellValue.ToString();
+
+            var cellRangeNumber = DmnServices.GetRangeNumber(cellValue.ToString());
+            if (cellRangeNumber != null)
             {
-                var type1 = ParseCellValue(regex2.Groups["range1"]);
-                var type2 = ParseCellValue(regex2.Groups["range2"]);
+                var type1 = ParseCellValue(cellRangeNumber[0]);
+                var type2 = ParseCellValue(cellRangeNumber[1]);
 
                 if (type1 != type2)
                     return GetType(type1, type2);
-                cellValueString = regex2.Groups["range1"].Value;
+                cellValueString = cellRangeNumber[0];
             }
 
 
@@ -376,6 +379,29 @@ namespace Excel
             var dmnId = ws.Cells["C2"].Value ?? "dmnId";
 
             return new Dictionary<string, string>() { { dmnId.ToString(), dmnName.ToString() } };
+        }
+
+        public static Dictionary<string, string[]> GetColumnRagngeInLeters(ExcelTable table, int inputsColumnsCount, int outputsColumnsCount)
+        {
+            var dictionary = new Dictionary<string,string[]>();
+            var start = table.Address.Start.Column;
+            var end = table.Address.End.Column;
+            if ((inputsColumnsCount+outputsColumnsCount) > (end-start))
+                return null;
+            var outputsStart = start + inputsColumnsCount;
+            var inputsColumnIndexes =new List<string>();
+            for (int i = start; i < outputsStart; i++)
+            {
+                inputsColumnIndexes.Add(GetColumnName(i));
+            }
+            var outputsColumnIndexes =new List<string>();
+            for (int i = outputsStart; i < outputsStart+outputsColumnsCount; i++)
+            {
+                outputsColumnIndexes.Add(GetColumnName(i));
+            }
+            dictionary.Add("inputsIndex", inputsColumnIndexes.ToArray());
+            dictionary.Add("outputsIndex", outputsColumnIndexes.ToArray());
+            return dictionary;
         }
     }
 }

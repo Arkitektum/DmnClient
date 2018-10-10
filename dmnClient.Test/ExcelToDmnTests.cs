@@ -14,7 +14,7 @@ namespace dmnClient.Test
 {
     public class ExcelToDmnTests
     {
-        [Fact]
+        [Fact(DisplayName = "Integration Test")]
         public void Test1()
         {
             var resourcePath = "dmnClient.Test.TestData.dmnTest1.xlsx";
@@ -25,7 +25,7 @@ namespace dmnClient.Test
             var savedFilePath = Path.Combine(Directory.GetCurrentDirectory() + @"..\..\..\..\TestData\", file);
             var name = Path.GetFileNameWithoutExtension(savedFilePath);
             var fi = new FileInfo(savedFilePath);
-           
+
             ExcelPackage ep = new ExcelPackage(new FileInfo(savedFilePath));
             ExcelPackage ep1 = new ExcelPackage(resourceAsStream);
 
@@ -41,11 +41,14 @@ namespace dmnClient.Test
             var inputsRulesTypes = new ExcelServices().GetRulesTypes(workSheet, inputIndex, true);
             var inputsDictionary = new ExcelServices().GetExcelHeaderName(workSheet, inputIndex, true);
             var outputsDictionary = new ExcelServices().GetExcelHeaderName(workSheet, outputIndex, true);
+            var dmnInfo = new ExcelServices().GetDmnInfo(workSheet).FirstOrDefault();
+            var dmnName = dmnInfo.Value;
+            var dmnId = dmnInfo.Key;
 
 
             var newDmn = new DmnV1Builder()
                 .AddDefinitionsInfo("Excel2Dmn_" + DateTime.Now.ToString("dd-mm-yy"), name)
-                .AddDecision("KonsekvensBrannklassifisering", "Konsekvens brannklassifisering", "decisionTable")
+                .AddDecision(dmnId, dmnName, "decisionTable")
                 .AddInputsToDecisionTable(inputsDictionary, inputsRulesTypes)
                 .AddOutputsToDecisionTable(outputsDictionary, outputsRulesTypes)
                 .AddDecisionRules(inputsRulesDictionary, outputsRulesDictionary)
