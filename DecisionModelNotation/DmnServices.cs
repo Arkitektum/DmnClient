@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
+using System.Xml;
+using System.Xml.Serialization;
 using DecisionModelNotation.Shema;
 
 namespace DecisionModelNotation
@@ -84,6 +87,21 @@ namespace DecisionModelNotation
                 }
             }
             return outputs.ToArray();
+        }
+        public tDefinitions DeserializeStreamDmnFile(Stream fileStream)
+        {
+            tDefinitions resultinMessage;
+            try
+            {
+                var serializer = new XmlSerializer(typeof(tDefinitions));
+                resultinMessage = (tDefinitions)serializer.Deserialize(new XmlTextReader(fileStream));
+            }
+            catch
+            {
+
+                resultinMessage = null;
+            }
+            return resultinMessage;
         }
     }
 }
