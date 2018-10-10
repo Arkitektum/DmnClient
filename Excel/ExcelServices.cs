@@ -343,7 +343,7 @@ namespace Excel
             return type;
         }
 
-       
+
 
         private string ParseCellValue(object cellValue)
         {
@@ -379,6 +379,29 @@ namespace Excel
             var dmnId = ws.Cells["C2"].Value ?? "dmnId";
 
             return new Dictionary<string, string>() { { dmnId.ToString(), dmnName.ToString() } };
+        }
+
+        public static Dictionary<string, string[]> GetColumnRagngeInLeters(ExcelTable table, int inputsColumnsCount, int outputsColumnsCount)
+        {
+            var dictionary = new Dictionary<string,string[]>();
+            var start = table.Address.Start.Column;
+            var end = table.Address.End.Column;
+            if ((inputsColumnsCount+outputsColumnsCount) > (end-start))
+                return null;
+            var outputsStart = start + inputsColumnsCount;
+            var inputsColumnIndexes =new List<string>();
+            for (int i = start; i < outputsStart; i++)
+            {
+                inputsColumnIndexes.Add(GetColumnName(i));
+            }
+            var outputsColumnIndexes =new List<string>();
+            for (int i = outputsStart; i < outputsStart+outputsColumnsCount; i++)
+            {
+                outputsColumnIndexes.Add(GetColumnName(i));
+            }
+            dictionary.Add("inputsIndex", inputsColumnIndexes.ToArray());
+            dictionary.Add("outputsIndex", outputsColumnIndexes.ToArray());
+            return dictionary;
         }
     }
 }

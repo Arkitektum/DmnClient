@@ -40,13 +40,6 @@ namespace dmnClient.Controllers
             var httpRequest = HttpContext.Request;
             var responsDictionary = new Dictionary<string, string>();
             HttpResponseMessage response = null;
-            var inputsIndex = inputs.Split(',').ToArray();
-            var outputsIndex = outputs.Split(',').ToArray();
-
-            if (!inputsIndex.Any())
-                return BadRequest(new Dictionary<string, string>() { { "Inpust Row", "not specify" } });
-            if (!inputsIndex.Any())
-                return BadRequest(new Dictionary<string, string>() { { "Outpust Row", "not specify" } });
 
             if (httpRequest.Form.Files.Count != 1)
                 return BadRequest(new Dictionary<string, string>() { { "Error:", "Not file fount" } });
@@ -84,6 +77,20 @@ namespace dmnClient.Controllers
                     Dictionary<string, Dictionary<string, string>> outputsDictionary = null;
                     var dmnName = string.Empty;
                     var dmnId = string.Empty;
+
+                    var columnsDictionary = GetTablesIndex(table, inputs, outputs);
+                    string[] outputsIndex = null;
+                    string[] inputsIndex = null;
+                    if (columnsDictionary!=null)
+                    {
+                        columnsDictionary.TryGetValue("outputsIndex", out outputsIndex);
+                        columnsDictionary.TryGetValue("inputsIndex", out inputsIndex);
+                    }
+
+                    if (inputsIndex == null && outputsIndex == null)
+                    {
+                        return BadRequest(new Dictionary<string, string>() { { "Error", "Cant get inputs/output rows" } });
+                    }
 
                     try
                     {
@@ -127,13 +134,13 @@ namespace dmnClient.Controllers
 
                         //var dmnFile = string.Concat(path, filename, "_Exc2Dmn", ".dmn");
                         XmlSerializer xs = new XmlSerializer(typeof(DecisionModelNotation.Shema.tDefinitions));
-                        var combine = Path.Combine(path, string.Concat(filename,".dmn"));
+                        var combine = Path.Combine(path, string.Concat(filename, ".dmn"));
                         using (TextWriter tw = new StreamWriter(combine))
                         {
                             xs.Serialize(tw, newDmn);
                         }
 
-                        return Ok(new Dictionary<string, string>() { { filename+".dmn","Created" } });
+                        return Ok(new Dictionary<string, string>() { { filename + ".dmn", "Created" } });
                     }
                     catch (Exception e)
                     {
@@ -141,7 +148,7 @@ namespace dmnClient.Controllers
 
                     }
                 }
-                    return BadRequest(new Dictionary<string, string>() { { file.FileName, "Excel don't have Table" } });
+                return BadRequest(new Dictionary<string, string>() { { file.FileName, "Excel don't have Table" } });
 
             }
             return Ok(responsDictionary);
@@ -264,6 +271,31 @@ namespace dmnClient.Controllers
             return Ok(okDictionary);
         }
 
+        private static Dictionary<string, string[]> GetTablesIndex(ExcelTable table, string inputs, string outputs)
+        {
+            var inputsIsNumber = int.TryParse(inputs, out var inputsColumnsCount);
+            var outputsIsNumber = int.TryParse(outputs, out var outputsColumnsCount);
+            Dictionary<string, string[]> dictionary = null;
 
+            if (inputsIsNumber && outputsIsNumber)
+            {
+                dictionary = ExcelServices.GetColumnRagngeInLeters(table, inputsColumnsCount, outputsColumnsCount);
+            }
+            else
+            {
+                var inputsIndex = inputs.Split(',').ToArray();
+                var outputsIndex = outputs.Split(',').ToArray();
+                if (inputsIndex.Any() && outputsIndex.Any())
+                {
+                    dictionary = new Dictionary<string, string[]>()
+                    {
+                        {"inputsIndex",inputsIndex },
+                        {"outputsIndex",outputsIndex }
+                    };
+                }
+
+            }
+            return dictionary;
+        }
     }
 }
