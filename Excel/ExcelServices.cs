@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using DecisionModelNotation.Shema;
 using OfficeOpenXml;
+using OfficeOpenXml.Style;
 using OfficeOpenXml.Table;
 
 namespace Excel
@@ -64,7 +67,158 @@ namespace Excel
 
             return dictionary;
         }
+        public static void AddTableTitle(string tableName, ExcelWorksheet wsSheet1, tDecisionTable decisionTable, string tableId)
+        {
+            wsSheet1.Cells["B1"].Value = "DMN Navn:";
+            wsSheet1.Cells["C1"].Value = tableName;
 
+            wsSheet1.Cells["B2"].Value = "DMN id:";
+            wsSheet1.Cells["C2"].Value = tableId;
+
+            wsSheet1.Cells["B1"].Style.Font.Size = 12;
+            wsSheet1.Cells["B1"].Style.Font.Bold = true;
+            wsSheet1.Cells["B1"].Style.Font.Italic = true;
+            wsSheet1.Cells["B2"].Style.Font.Size = 12;
+            wsSheet1.Cells["B2"].Style.Font.Bold = true;
+            wsSheet1.Cells["B2"].Style.Font.Italic = true;
+        }
+        public static void AddTableInputOutputTitle(ExcelWorksheet wsSheet, tDecisionTable decisionTable)
+        {
+            var totalInput = decisionTable.input.Count();
+            var totalOutput = decisionTable.output.Count();
+            const int stratRow = 4;
+            const int stratColumn = 2;
+            var endInputColumn = stratColumn + totalInput;
+            var endColum = endInputColumn + totalOutput;
+
+            //input
+            using (ExcelRange rng = wsSheet.Cells[stratRow, stratColumn, stratRow, endInputColumn - 1])
+            {
+                InputOutputTitleFormat(rng, "Input");
+            }
+
+            //Output
+            using (ExcelRange rng = wsSheet.Cells[stratRow, endInputColumn, stratRow, endColum])
+            {
+                InputOutputTitleFormat(rng, "Output");
+            }
+
+        }
+        private static void InputOutputTitleFormat(ExcelRange excelRange, string text)
+        {
+            excelRange.Value = text;
+            excelRange.Style.Font.Size = 12;
+            excelRange.Style.Font.Bold = true;
+            excelRange.Style.Font.Italic = true;
+            excelRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            excelRange.Merge = true;
+            excelRange.Style.Border.BorderAround(ExcelBorderStyle.Thin);
+
+        }
+
+        public static void CreateExcelTableFromDecisionTable(tDecisionTable decisionTable, ExcelWorksheet wsSheet,
+            string tableName)
+        {
+            // palse Table in Excel
+            const int stratRow = 5;
+            const int stratColumn = 2;
+
+            // Calculate size of the table
+            var totalInput = decisionTable.input.Count();
+            var totalOutput = decisionTable.output.Count();
+            var totalRules = decisionTable.rule.Count();
+            var endRow = stratRow + totalRules + 1;
+            var endColum = stratColumn + totalInput + totalOutput;
+
+            // Create Excel table Header
+            using (ExcelRange rng = wsSheet.Cells[stratRow, stratColumn, endRow, endColum])
+            {
+                //Indirectly access ExcelTableCollection class
+                ExcelTable table = wsSheet.Tables.Add(rng, tableName);
+                var color = Color.FromArgb(250, 199, 111);
+                //Set Columns position & name
+                var i = 0;
+                foreach (var inputClause in decisionTable.input)
+                {
+                    table.Columns[i].Name = inputClause.label;
+
+                    //add input variable name
+                    AddExcelCellByRowAndColumn(stratColumn + i, stratRow + 1,
+                        inputClause.inputExpression.Item.ToString(), wsSheet, color);
+
+                    i++;
+                }
+
+                foreach (var outputClause in decisionTable.output)
+                {
+                    table.Columns[i].Name = outputClause.label;
+
+                    // Add Output variable name
+                    AddExcelCellByRowAndColumn(stratColumn + i, stratRow + 1, outputClause.name, wsSheet, color);
+
+                    i++;
+                }
+
+                table.Columns[i].Name = "Annotation";
+                // Add empty cell for annotation
+                AddExcelCellByRowAndColumn(stratColumn + i, stratRow + 1, " ", wsSheet, color);
+                //table.ShowHeader = false;
+                //table.ShowFilter = true;
+                //table.ShowTotal = true;
+            }
+
+            // Set Excel table content
+            var inputColumn = stratColumn;
+            var outputColumn = stratColumn + totalInput;
+            var row = stratRow + 1;
+
+            foreach (var rule in decisionTable.rule)
+            {
+                // input content
+                row++;
+                foreach (var tUnaryTestse in rule.inputEntry)
+                {
+                    AddExcelCellByRowAndColumn(inputColumn, row, tUnaryTestse.text, wsSheet);
+                    inputColumn++;
+                }
+                inputColumn = stratColumn;
+
+                // set Output result content
+                foreach (var literalExpression in rule.outputEntry)
+                {
+                    AddExcelCellByRowAndColumn(outputColumn, row, literalExpression.Item.ToString(), wsSheet);
+                    outputColumn++;
+                }
+
+                var annotationCellName = string.Concat(GetColumnName(endColum), row);
+                using (ExcelRange rng = wsSheet.Cells[annotationCellName])
+                {
+                    rng.Value = rule.description;
+                }
+
+                outputColumn = stratColumn + totalInput;
+            }
+
+            //wsSheet1.Protection.IsProtected = false;
+            //wsSheet1.Protection.AllowSelectLockedCells = false;
+            wsSheet.Cells[wsSheet.Dimension.Address].AutoFitColumns();
+        }
+        private static void AddExcelCellByRowAndColumn(int column, int row, string value, ExcelWorksheet wsSheet, Color? color = null)
+        {
+            var cellName = string.Concat(GetColumnName(column), row);
+            using (ExcelRange rng1 = wsSheet.Cells[cellName])
+            {
+                if (color.HasValue)
+                {
+                    rng1.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    rng1.Style.Fill.BackgroundColor.SetColor(color.Value);
+                }
+
+                rng1.Value = value;
+            }
+        }
+
+        //Excel to DMN
         private int GetRange(string[] columnIndexs, out int end)
         {
             var columnIndexsOrderBy = columnIndexs.OrderBy(d => d).ToArray();
@@ -140,50 +294,72 @@ namespace Excel
                 var cellValue = ws.Cells[cellName].Value;
                 var typeTemp = ParseCellValue(cellValue);
                 type = type ?? typeTemp;
-                if (type != typeTemp && !string.IsNullOrEmpty(typeTemp))
-                {
-                    if (type == "integer")
-                    {
-                        switch (typeTemp)
-                        {
-                            case "double":
-                                type = "double";
-                                break;
-                            case "long":
-                                type = "long";
-                                break;
-                            default:
-                                type = "string";
-                                break;
-                        }
-                    }
-                    if (type == "double" || type == "long")
-                    {
-                        switch (typeTemp)
-                        {
-                            case "double":
-                            case "long":
-                            case "integer":
-                                type = "double";
-                                break;
-                            case "string":
-                            case "boolean":
-                                type = "string";
-                                break;
-                        }
-                    }
-                    if (type == "boolean")
-                        type = "string";
-                }
+                type = GetType(type, typeTemp);
             }
+            return type;
+        }
+
+        private static string GetType(string type, string typeTemp)
+        {
+            if (type != typeTemp && !string.IsNullOrEmpty(typeTemp))
+            {
+                if (type == "integer")
+                {
+                    switch (typeTemp)
+                    {
+                        case "double":
+                            type = "double";
+                            break;
+                        case "long":
+                            type = "long";
+                            break;
+                        default:
+                            type = "string";
+                            break;
+                    }
+                }
+
+                if (type == "double" || type == "long")
+                {
+                    switch (typeTemp)
+                    {
+                        case "double":
+                        case "long":
+                        case "integer":
+                            type = "double";
+                            break;
+                        case "string":
+                        case "boolean":
+                            type = "string";
+                            break;
+                    }
+                }
+
+                if (type == "boolean")
+                    type = "string";
+            }
+
             return type;
         }
 
         private string ParseCellValue(object cellValue)
         {
-            if (string.IsNullOrEmpty(cellValue.ToString())) return String.Empty;
-            var regex = Regex.Match(cellValue?.ToString(), @"^[<,>,=]?[=]?\s?(?<number>\d+(\.\d+)?)$");
+            if (cellValue == null|| string.IsNullOrEmpty(cellValue.ToString())) return string.Empty;
+            //if (string.IsNullOrEmpty(cellValue.ToString()))return String.Empty;
+            var regex = Regex.Match(cellValue?.ToString(), @"^[<,>,=]?\s?(?<number>\d+(\.\d+)?)$");
             string cellValueString = regex.Success ? regex.Groups["number"].ToString() : cellValue.ToString();
+
+            var regex2 = Regex.Match(cellValue?.ToString(), @"^[\[,\],]\s?(?<range1>\d+(\.\d+)?).{2}?(?<range2>\d+(\.\d+)?)[\[,\]]$");
+            if (regex2.Success)
+            {
+                var type1 = ParseCellValue(regex2.Groups["range1"]);
+                var type2 = ParseCellValue(regex2.Groups["range2"]);
+
+                if (type1 != type2)
+                    return GetType(type1, type2);
+                cellValueString = regex2.Groups["range1"].Value;
+            }
+
 
             if (int.TryParse(cellValueString, out var intType)) return "integer";
             if (long.TryParse(cellValueString, out var longType)) return "long";

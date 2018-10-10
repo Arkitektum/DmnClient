@@ -28,8 +28,9 @@ namespace DecisionModelNotation
             _dmn.name = name;
             return this;
         }
-        public DmnV1Builder AddDecision(string decisionId, string decisionName, string decisitonTableId)
+        public DmnV1Builder AddDecision(string decisionId, string decisionName, string decisitonTableId, string hitPolicy = "FIRST")
         {
+
             _dmn.Items = new[]
             {
                 new tDecision()
@@ -39,10 +40,24 @@ namespace DecisionModelNotation
                     Item = new tDecisionTable()
                     {
                         id = decisitonTableId,
+                        hitPolicy = GethitPolicy(hitPolicy)
                     },
                 },
             };
             return this;
+        }
+
+        private tHitPolicy GethitPolicy(string hitPolicy)
+        {
+            switch (hitPolicy)
+            {
+                case "FIRST":return tHitPolicy.FIRST;
+                case "UNIQUE":return tHitPolicy.UNIQUE;
+                case "PRIORITY":return tHitPolicy.PRIORITY;
+                case "ANY":return tHitPolicy.ANY;
+                case "COLLECT": return tHitPolicy.UNIQUE;
+                default: return tHitPolicy.FIRST;
+            }
         }
 
         public DmnV1Builder AddInputsToDecisionTable(Dictionary<string, Dictionary<string, string>> inputsDictionary, Dictionary<int, string> inputsTypes)
@@ -161,12 +176,25 @@ namespace DecisionModelNotation
 
         private string GetValueParse(string cellValue)
         {
+            var regex = Regex.Match(cellValue, @"^[<,>,=]?[=]?\s?(?<number>\d+(\.\d+)?)$");
+            var regex2 = Regex.Match(cellValue, @"^[\[,\],]\s?(?<range1>\d+(\.\d+)?).{2}?(?<range2>\d+(\.\d+)?)[\[,\]]$");
+
             if (int.TryParse(cellValue, out var intType)) return intType.ToString();
             if (long.TryParse(cellValue, out var longType)) return longType.ToString();
             if (double.TryParse(cellValue, out var doubleType)) return doubleType.ToString();
             if (bool.TryParse(cellValue, out var booleanType)) return booleanType.ToString().ToLower();
+            var values = cellValue.Split(";");
+            string newCellValue = cellValue;
+            if (values != null && values.Any() && !regex.Success && !regex2.Success && !string.IsNullOrEmpty(newCellValue))
+            {
+                newCellValue = string.Empty;
+                for (int i = 0; i < values.Count(); i++)
+                {
+                    newCellValue = i == 0 ? string.Concat("\"", values[i], "\"") : string.Concat(newCellValue, ",", "\"", values[i], "\"");
+                }
+            }
 
-            return cellValue;
+            return newCellValue;
         }
 
 

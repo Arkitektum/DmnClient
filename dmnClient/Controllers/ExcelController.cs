@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -7,6 +8,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using DecisionModelNotation;
+using DecisionModelNotation.Shema;
+using Excel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
@@ -195,19 +198,116 @@ namespace dmnClient.Controllers
         {
             var httpRequest = HttpContext.Request;
             HttpResponseMessage response = null;
-            string responseText = null;
-            var httpFiles = httpRequest.Form.Files;
 
-            if (httpFiles.Count == 0)
+            string okResponsText = null;
+            var httpFiles = httpRequest.Form.Files;
+            var okDictionary = new Dictionary<string, string>();
+            var ErrorDictionary = new Dictionary<string, string>();
+
+            if (httpFiles == null && !httpFiles.Any())
                 return NotFound("Kan ikke finne noen fil");
 
             for (var i = 0; i < httpFiles.Count; i++)
             {
-                responseText = i.ToString();
+                string errorResponsText = null;
+                string errorTemp = string.Empty;
+                var file = httpFiles[i];
+                tDefinitions dmn = null;
+
+                //Deserialize DMN file
+                if (file != null)
+                {
+                    using (Stream dmnfile = httpFiles[i].OpenReadStream())
+                    {
+                        dmn = new DmnServices().DeserializeStreamDmnFile(dmnfile);
+                    }
+                }
+                if (dmn == null)
+                {
+                    ErrorDictionary.Add(file.FileName, " Can not validate Shema");
+                    continue;
+                }
+                // check if DMN have desicion table
+
+                var items = dmn.Items;
+                var decision = items.Where(t => t.GetType() == typeof(tDecision));
+                var tDrgElements = decision as tDRGElement[] ?? decision.ToArray();
+                if (!tDrgElements.Any())
+                {
+                    ErrorDictionary.Add(file.FileName, " Dmn file have now decision");
+                    continue;
+                }
+
+                // create Excel Package
+                ExcelPackage excelPkg = null;
+                try
+                {
+                    excelPkg = new ExcelPackage();
+                    foreach (var tdecision in tDrgElements)
+                    {
+                        try
+                        {
+                            var dt = ((tDecision)tdecision).Item;
+                            var decisionTable = (tDecisionTable)Convert.ChangeType(dt, typeof(tDecisionTable));
+                            ExcelWorksheet wsSheet = excelPkg.Workbook.Worksheets.Add(tdecision.id);
+                            //Add Table Title
+                            ExcelServices.AddTableTitle(tdecision.name, wsSheet, decisionTable, tdecision.id);
+                            // Add "input" and "output" headet to Excel table
+                            ExcelServices.AddTableInputOutputTitle(wsSheet, decisionTable);
+                            //Add DMN Table to excel Sheet
+                            ExcelServices.CreateExcelTableFromDecisionTable(decisionTable, wsSheet, tdecision.id);
+
+                        }
+                        catch
+                        {
+                            ErrorDictionary.Add(file.FileName, " DMN Can not be create");
+                        }
+                    }
+                }
+                catch
+                {
+                    ErrorDictionary.Add(file.FileName, " Can not create Excel");
+                    continue;
+                }
+                // Save Excel Package
+                try
+                {
+                    var filename = Path.GetFileNameWithoutExtension(file.FileName);
+                    var path = Path.Combine(@"C:\", "DmnToExcel");
+
+                    Directory.CreateDirectory(path);
+                    excelPkg.SaveAs(new FileInfo(Path.Combine(path, string.Concat(filename, ".xlsx"))));
+
+                    var temp = string.Concat("* ", file.FileName, ":", " created");
+                    okResponsText = string.IsNullOrEmpty(okResponsText)
+                        ? temp
+                        : okResponsText + temp;
+                    okDictionary.Add(file.FileName, "Created");
+                }
+                catch
+                {
+
+                    ErrorDictionary.Add(file.FileName," Can not be saved");
+                }
+
             }
 
+            if (ErrorDictionary.Any())
+            {
+                if (okDictionary.Any())
+                {
+                    List<Dictionary<string, string>> dictionaries = new List<Dictionary<string, string>>();
+                    dictionaries.Add(okDictionary);
+                    dictionaries.Add(ErrorDictionary);
+                    var result = dictionaries.SelectMany(dict => dict)
+                        .ToLookup(pair => pair.Key, pair => pair.Value)
+                        .ToDictionary(group => group.Key, group => group.First());
+                    return Ok(result);
+                }
+                return BadRequest(ErrorDictionary);
 
-            return Ok(responseText);
+            }
+            return Ok(okDictionary);
         }
 
 

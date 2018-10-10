@@ -7,6 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="TestData\dmnTest1.xlsx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="TestData\dmnTest1.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EPPlus" Version="4.5.2.1" />
     <PackageReference Include="FluentAssertions" Version="5.4.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
     <PackageReference Include="xunit" Version="2.4.0" />
@@ -14,6 +25,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DecisionModelNotation\DecisionModelNotation.csproj" />
+    <ProjectReference Include="..\Excel\Excel.csproj" />
   </ItemGroup>
 
 </Project>
