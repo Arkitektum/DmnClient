@@ -64,7 +64,7 @@ namespace dmnClient.Controllers
                 }
                 catch (Exception e)
                 {
-                    return BadRequest(new Dictionary<string, string>() { { "Error:", "Can Not Open Excel File" } });
+                    return BadRequest(new Dictionary<string, string>() { { "Error:", "Can't Open Excel File" } });
                 }
 
                 if (table != null)
@@ -81,7 +81,7 @@ namespace dmnClient.Controllers
                     var columnsDictionary = GetTablesIndex(table, inputs, outputs);
                     string[] outputsIndex = null;
                     string[] inputsIndex = null;
-                    if (columnsDictionary!=null)
+                    if (columnsDictionary != null)
                     {
                         columnsDictionary.TryGetValue("outputsIndex", out outputsIndex);
                         columnsDictionary.TryGetValue("inputsIndex", out inputsIndex);
@@ -89,7 +89,7 @@ namespace dmnClient.Controllers
 
                     if (inputsIndex == null && outputsIndex == null)
                     {
-                        return BadRequest(new Dictionary<string, string>() { { "Error", "Cant get inputs/output rows" } });
+                        return BadRequest(new Dictionary<string, string>() { { "Error", "Can't get inputs/output rows" } });
                     }
 
                     try
@@ -112,7 +112,7 @@ namespace dmnClient.Controllers
                     }
                     catch (Exception)
                     {
-                        return BadRequest(new Dictionary<string, string>() { { "Error:", "Can not Get Excel info" } });
+                        return BadRequest(new Dictionary<string, string>() { { "Error:", "Can't Get Excel info" } });
                     }
 
                     var filename = Path.GetFileNameWithoutExtension(file.FileName);
@@ -140,15 +140,15 @@ namespace dmnClient.Controllers
                             xs.Serialize(tw, newDmn);
                         }
 
-                        return Ok(new Dictionary<string, string>() { { filename + ".dmn", "Created" } });
+                        return Ok(new Dictionary<string, string>() { { filename + ".dmn", "Created" }, { "Path", combine } });
                     }
                     catch (Exception e)
                     {
-                        return BadRequest(new Dictionary<string, string>() { { filename + ".dmn", "Can not be safe" } });
+                        return BadRequest(new Dictionary<string, string>() { { filename + ".dmn", "Can't be safe" } });
 
                     }
                 }
-                return BadRequest(new Dictionary<string, string>() { { file.FileName, "Excel don't have Table" } });
+                return BadRequest(new Dictionary<string, string>() { { file.FileName, "Excel file don't have table" } });
 
             }
             return Ok(responsDictionary);
@@ -166,7 +166,7 @@ namespace dmnClient.Controllers
             var ErrorDictionary = new Dictionary<string, string>();
 
             if (httpFiles == null && !httpFiles.Any())
-                return NotFound("Kan ikke finne noen fil");
+                return NotFound("Can't find any file");
 
             for (var i = 0; i < httpFiles.Count; i++)
             {
@@ -185,7 +185,7 @@ namespace dmnClient.Controllers
                 }
                 if (dmn == null)
                 {
-                    ErrorDictionary.Add(file.FileName, " Can not validate Shema");
+                    ErrorDictionary.Add(file.FileName, "Can't validate Shema");
                     continue;
                 }
                 // check if DMN have desicion table
@@ -195,7 +195,7 @@ namespace dmnClient.Controllers
                 var tDrgElements = decision as tDRGElement[] ?? decision.ToArray();
                 if (!tDrgElements.Any())
                 {
-                    ErrorDictionary.Add(file.FileName, " Dmn file have now decision");
+                    ErrorDictionary.Add(file.FileName, "Dmn file have non decision");
                     continue;
                 }
 
@@ -206,10 +206,11 @@ namespace dmnClient.Controllers
                     excelPkg = new ExcelPackage();
                     foreach (var tdecision in tDrgElements)
                     {
+                        tDecisionTable decisionTable = null;
                         try
                         {
                             var dt = ((tDecision)tdecision).Item;
-                            var decisionTable = (tDecisionTable)Convert.ChangeType(dt, typeof(tDecisionTable));
+                            decisionTable = (tDecisionTable)Convert.ChangeType(dt, typeof(tDecisionTable));
                             ExcelWorksheet wsSheet = excelPkg.Workbook.Worksheets.Add(tdecision.id);
                             //Add Table Title
                             ExcelServices.AddTableTitle(tdecision.name, wsSheet, decisionTable, tdecision.id);
@@ -221,13 +222,13 @@ namespace dmnClient.Controllers
                         }
                         catch
                         {
-                            ErrorDictionary.Add(file.FileName, " DMN Can not be create");
+                            ErrorDictionary.Add(file.FileName,string.Concat("Dmn: ",tdecision.name, " Can't be create"));
                         }
                     }
                 }
                 catch
                 {
-                    ErrorDictionary.Add(file.FileName, " Can not create Excel");
+                    ErrorDictionary.Add(file.FileName, "Can't create Excel file");
                     continue;
                 }
                 // Save Excel Package
@@ -239,16 +240,12 @@ namespace dmnClient.Controllers
                     Directory.CreateDirectory(path);
                     excelPkg.SaveAs(new FileInfo(Path.Combine(path, string.Concat(filename, ".xlsx"))));
 
-                    var temp = string.Concat("* ", file.FileName, ":", " created");
-                    okResponsText = string.IsNullOrEmpty(okResponsText)
-                        ? temp
-                        : okResponsText + temp;
-                    okDictionary.Add(file.FileName, "Created");
+                    okDictionary.Add(file.FileName, "Created in:"+path);
                 }
                 catch
                 {
 
-                    ErrorDictionary.Add(file.FileName, " Can not be saved");
+                    ErrorDictionary.Add(file.FileName, "Can't be saved");
                 }
 
             }
