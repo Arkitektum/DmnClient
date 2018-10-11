@@ -294,7 +294,7 @@ namespace Excel
                 var cellName = string.Concat(GetColumnName(columnIndex), i);
                 var cellValue = ws.Cells[cellName].Value;
                 var typeTemp = ParseCellValue(cellValue);
-                type = type ?? typeTemp;
+                type = string.IsNullOrEmpty(type)? typeTemp:type;
                 type = GetType(type, typeTemp);
             }
             return type;

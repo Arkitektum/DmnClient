@@ -147,7 +147,7 @@ namespace DecisionModelNotation
                 //{
                 //    rule.Item = output.Value;
                 //}
-                rule.Item = GetValueParse(output.Value.ToString());
+                rule.Item = output.Value !=null ? GetValueParse(output.Value.ToString()): output.Value;
                 outputsRules.Add(rule);
             }
 
