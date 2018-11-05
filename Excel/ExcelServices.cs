@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Dynamic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using DecisionModelNotation;
+using DecisionModelNotation.Models;
 using DecisionModelNotation.Shema;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
@@ -117,8 +120,7 @@ namespace Excel
 
         }
 
-        public static void CreateExcelTableFromDecisionTable(tDecisionTable decisionTable, ExcelWorksheet wsSheet,
-            string tableName)
+        public static void CreateExcelTableFromDecisionTable(tDecisionTable decisionTable, ExcelWorksheet wsSheet, string tableName)
         {
             // palse Table in Excel
             const int stratRow = 5;
@@ -160,8 +162,8 @@ namespace Excel
                     i++;
                 }
 
-                table.Columns[i].Name = "Annotation";
                 // Add empty cell for annotation
+                table.Columns[i].Name = "Annotation";
                 AddExcelCellByRowAndColumn(stratColumn + i, stratRow + 1, " ", wsSheet, color);
                 //table.ShowHeader = false;
                 //table.ShowFilter = true;
@@ -294,7 +296,7 @@ namespace Excel
                 var cellName = string.Concat(GetColumnName(columnIndex), i);
                 var cellValue = ws.Cells[cellName].Value;
                 var typeTemp = ParseCellValue(cellValue);
-                type = string.IsNullOrEmpty(type)? typeTemp:type;
+                type = string.IsNullOrEmpty(type) ? typeTemp : type;
                 type = GetType(type, typeTemp);
             }
             return type;
@@ -347,6 +349,7 @@ namespace Excel
 
         private string ParseCellValue(object cellValue)
         {
+            //cellValue = cellValue.ToString().Trim();
             if (cellValue == null || string.IsNullOrEmpty(cellValue.ToString())) return string.Empty;
             //if (string.IsNullOrEmpty(cellValue.ToString()))return String.Empty;
 
@@ -383,25 +386,156 @@ namespace Excel
 
         public static Dictionary<string, string[]> GetColumnRagngeInLeters(ExcelTable table, int inputsColumnsCount, int outputsColumnsCount)
         {
-            var dictionary = new Dictionary<string,string[]>();
+            var dictionary = new Dictionary<string, string[]>();
             var start = table.Address.Start.Column;
             var end = table.Address.End.Column;
-            if ((inputsColumnsCount+outputsColumnsCount) > (end-start))
+            if ((inputsColumnsCount + outputsColumnsCount) > (end - start))
                 return null;
             var outputsStart = start + inputsColumnsCount;
-            var inputsColumnIndexes =new List<string>();
+            var inputsColumnIndexes = new List<string>();
             for (int i = start; i < outputsStart; i++)
             {
                 inputsColumnIndexes.Add(GetColumnName(i));
             }
-            var outputsColumnIndexes =new List<string>();
-            for (int i = outputsStart; i < outputsStart+outputsColumnsCount; i++)
+            var outputsColumnIndexes = new List<string>();
+            for (int i = outputsStart; i < outputsStart + outputsColumnsCount; i++)
             {
                 outputsColumnIndexes.Add(GetColumnName(i));
             }
             dictionary.Add("inputsIndex", inputsColumnIndexes.ToArray());
             dictionary.Add("outputsIndex", outputsColumnIndexes.ToArray());
             return dictionary;
+        }
+
+        public Dictionary<int, string> GetAnnotationsRulesFromExcel(ExcelWorksheet ws, string[] inputsIndex, string[] outputsIndex, bool variableId)
+        {
+            var dictionary = new Dictionary<int, string>();
+
+            var table = ws.Tables.First();
+            var tableStartRow = table.Address.Start.Row;
+
+
+            var startRow = variableId ? tableStartRow + 2 : tableStartRow + 1;
+
+            var tableSize = table.Columns.Count;
+            if (tableSize == outputsIndex.Count() + inputsIndex.Count() + 1)
+            {
+                var start = GetRange(inputsIndex, out var end);
+                if (!CheckColumnRange(table, start, end)) return dictionary;
+                for (var i = startRow; i <= table.Address.End.Row; i++)
+                {
+                    var cellName = string.Concat(GetColumnName(table.Address.End.Column), i);
+                    var cellValue = ws.Cells[cellName].Value;
+
+                    dictionary.Add(i, cellValue?.ToString());
+                }
+            }
+            return dictionary;
+        }
+
+        public static void CreateSummaryExcelTableDataDictionary(List<DataDictionaryModel> dataDictionaryList, ExcelWorksheet wsSheet, string tableName, string[] objectPropertyNames)
+        {
+            // place Table in Excel
+            SetExcelTablePosition(dataDictionaryList.Count, objectPropertyNames.Length - 1, out var stratColumn, out var endRow, out var endColum, out var stratRow);
+
+            //Create Excel table  and set Header
+            CreateExcelTableHeader(wsSheet, tableName, stratRow, stratColumn, endRow, endColum, objectPropertyNames);
+
+            // Set Excel table content
+            var dataRow = stratRow + 1;
+            var dataColumn = stratColumn;
+
+            foreach (var dataDictionary in dataDictionaryList)
+            {
+                AddExcelTableRowData(dataDictionary, dataColumn, dataRow, wsSheet, objectPropertyNames);
+                dataRow++;
+            }
+
+            //wsSheet1.Protection.IsProtected = false;
+            //wsSheet1.Protection.AllowSelectLockedCells = false;
+            wsSheet.Cells[wsSheet.Dimension.Address].AutoFitColumns();
+        }
+
+        public static void CreateDmnExcelTableDataDictionary(IEnumerable<DmnDataDictionaryModel> dmns, ExcelWorksheet wsSheet, string tableName, string[] objectPropertyNames)
+        {
+            // place Table in Excel
+            SetExcelTablePosition(dmns.Count(), objectPropertyNames.Length - 1, out var stratColumn, out var endRow, out var endColum, out var stratRow);
+
+            //Create Excel table  and set Header
+            CreateExcelTableHeader(wsSheet, tableName, stratRow, stratColumn, endRow, endColum, objectPropertyNames);
+
+            // Set Excel table content
+            var dataRow = stratRow + 1;
+            var dataColumn = stratColumn;
+
+            foreach (var dmnData in dmns)
+            {
+                AddExcelTableRowData(dmnData, dataColumn, dataRow, wsSheet, objectPropertyNames);
+                dataRow++;
+            }
+            wsSheet.Cells[wsSheet.Dimension.Address].AutoFitColumns();
+        }
+
+        private static void CreateExcelTableHeader(ExcelWorksheet wsSheet, string tableName, int stratRow, int stratColumn, int endRow,
+            int endColum, string[] objectPropertyNames)
+        {
+            ExcelTable table;
+            using (ExcelRange rng = wsSheet.Cells[stratRow, stratColumn, endRow, endColum])
+            {
+                //Add data dictionary Headers to Table
+                table = wsSheet.Tables.Add(rng, tableName);
+                AddExcelTableHeaderColumnsValues(table, objectPropertyNames);
+            }
+        }
+
+        private static void SetExcelTablePosition(int rowNumber, int propertiesNamesCount, out int stratColumn, out int endRow, out int endColum, out int stratRow)
+        {
+            stratRow = 5;
+            stratColumn = 2;
+
+            var totalDataColumns = propertiesNamesCount;
+            var totalDataRows = rowNumber;
+            endRow = stratRow + totalDataRows;
+            endColum = stratColumn + totalDataColumns;
+        }
+
+        private static void AddExcelTableRowData(object modelData, int dataColumn, int dataRow, ExcelWorksheet wsSheet, string[] dmnFields)
+        {
+            for (int i = 0; i < dmnFields.Length; i++)
+            {
+                var value = GetPropertyStringValue(modelData, dmnFields[i]);
+                    AddExcelCellByRowAndColumn(dataColumn, dataRow, value, wsSheet);
+                    dataColumn++;
+            }
+        }
+
+        private static string GetPropertyStringValue(object objectData, string propertyName)
+        {
+            try
+            {
+                foreach (String part in propertyName.Split('.'))
+                {
+                    if (objectData == null) { return null; }
+                    Type type = objectData.GetType();
+                    PropertyInfo info = type.GetProperty(part);
+                    if (info == null) { return null; }
+                    objectData = info.GetValue(objectData, null);
+                }
+                var stringValue = objectData.ToString();
+                return stringValue;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void AddExcelTableHeaderColumnsValues(ExcelTable table, string[] name)
+        {
+            for (int i = 0; i < name.Length; i++)
+            {
+                table.Columns[i].Name = name[i];
+            }
         }
     }
 }

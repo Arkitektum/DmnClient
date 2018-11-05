@@ -1,26 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.omg.org/spec/DMN/20151101/dmn.xsd" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="Excel2Dmn_15-11-18" name="dmnTest1" namespace="http://www.omg.org/spec/DMN/20151101/dmn.xsd">
-  <decision id="dmnTest01" name="Decision Table Test 01">
+<definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.omg.org/spec/DMN/20151101/dmn.xsd" xmlns:camunda="http://camunda.org/schema/1.0/dmn" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="Excel2Dmn_15-11-18" name="dmnTest1" namespace="http://www.omg.org/spec/DMN/20151101/dmn.xsd">
+  <decision id="dmnTest02" name="Decision Table Test 02">
     <decisionTable id="decisionTable" hitPolicy="FIRST">
       <input id="inp1" label="input 1">
-        <inputExpression id="exp_inp1" label="label_inp1" typeRef="double">        <text>inp1-Text</text>
+        <inputExpression id="exp_inp1" label="label_inp1" typeRef="double">        <text>inp1</text>
 </inputExpression>
       </input>
-      <input id="inp2" label="Input 2">
-        <inputExpression id="exp_inp2" label="label_inp2" typeRef="boolean">        <text>inp2-Text</text>
+      <input id="inp2" label="Input 2" camunda:inputVariable="">
+        <inputExpression id="exp_inp2" label="label_inp2" typeRef="boolean">        <text>inp2</text>
 </inputExpression>
       </input>
       <input id="inp3" label="Input 3">
         <inputExpression id="exp_inp3" label="label_inp3" typeRef="string">        <text>inp3</text>
 </inputExpression>
       </input>
-      <input id="inp4" label="Input 4">
+      <input id="inp4" label="Input 4" camunda:inputVariable="">
         <inputExpression id="exp_inp4" label="label_inp4" typeRef="double">        <text>inp4</text>
+</inputExpression>
+      </input>
+      <input id="out3" label="Output 3" camunda:inputVariable="">
+        <inputExpression id="LiteralExpression_10vnzjm" typeRef="boolean">        <text>out3</text>
 </inputExpression>
       </input>
       <output id="out1_Id" label="Output1" name="out1" typeRef="string" />
       <output id="out2_Id" label="Output 2" name="out2" typeRef="double" />
-      <output id="out3_Id" label="Output 3" name="out3" typeRef="boolean" />
       <rule id="rowRule_7">
         <description>Annotation 02</description>
         <inputEntry id="B7">        <text><![CDATA[< 500]]></text>
@@ -31,11 +34,11 @@
 </inputEntry>
         <inputEntry id="E7">        <text>1.22</text>
 </inputEntry>
+        <inputEntry id="UnaryTests_0gub09u">        <text>false</text>
+</inputEntry>
         <outputEntry id="LiteralExpression_F7">        <text><![CDATA["a"]]></text>
 </outputEntry>
         <outputEntry id="LiteralExpression_G7">        <text>1.1</text>
-</outputEntry>
-        <outputEntry id="LiteralExpression_H7">        <text>true</text>
 </outputEntry>
       </rule>
       <rule id="rowRule_8">
@@ -47,11 +50,11 @@
 </inputEntry>
         <inputEntry id="E8">        <text>1.23</text>
 </inputEntry>
+        <inputEntry id="UnaryTests_178c1sx">        <text>true</text>
+</inputEntry>
         <outputEntry id="LiteralExpression_F8">        <text><![CDATA["b"]]></text>
 </outputEntry>
         <outputEntry id="LiteralExpression_G8">        <text>1.2</text>
-</outputEntry>
-        <outputEntry id="LiteralExpression_H8">        <text>false</text>
 </outputEntry>
       </rule>
       <rule id="rowRule_9">
@@ -64,11 +67,11 @@
 </inputEntry>
         <inputEntry id="E9">        <text>1.24</text>
 </inputEntry>
+        <inputEntry id="UnaryTests_179arzo">        <text>true</text>
+</inputEntry>
         <outputEntry id="LiteralExpression_F9">        <text><![CDATA["c"]]></text>
 </outputEntry>
         <outputEntry id="LiteralExpression_G9">        <text>1.3</text>
-</outputEntry>
-        <outputEntry id="LiteralExpression_H9">        <text>true</text>
 </outputEntry>
       </rule>
       <rule id="rowRule_10">
@@ -81,11 +84,11 @@
 </inputEntry>
         <inputEntry id="E10">        <text>1.25</text>
 </inputEntry>
+        <inputEntry id="UnaryTests_08undby">        <text>false</text>
+</inputEntry>
         <outputEntry id="LiteralExpression_F10">        <text><![CDATA["a"]]></text>
 </outputEntry>
         <outputEntry id="LiteralExpression_G10">        <text>1.4</text>
-</outputEntry>
-        <outputEntry id="LiteralExpression_H10">        <text>true</text>
 </outputEntry>
       </rule>
       <rule id="rowRule_11">
@@ -98,11 +101,11 @@
 </inputEntry>
         <inputEntry id="E11">        <text></text>
 </inputEntry>
+        <inputEntry id="UnaryTests_08pum98">        <text></text>
+</inputEntry>
         <outputEntry id="LiteralExpression_F11">        <text><![CDATA["åæø"]]></text>
 </outputEntry>
         <outputEntry id="LiteralExpression_G11">        <text></text>
-</outputEntry>
-        <outputEntry id="LiteralExpression_H11">        <text></text>
 </outputEntry>
       </rule>
     </decisionTable>

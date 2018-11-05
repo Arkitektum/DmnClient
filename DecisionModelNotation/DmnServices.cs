@@ -5,7 +5,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
+using System.Xml.Linq;
 using System.Xml.Serialization;
+using DecisionModelNotation.Models;
 using DecisionModelNotation.Shema;
 
 namespace DecisionModelNotation
@@ -61,6 +63,9 @@ namespace DecisionModelNotation
             }
             return inputs.ToArray();
         }
+
+
+
         public tOutputClause[] CreateDmnOutpus(Dictionary<string, Dictionary<string, string>> inputsDictionary)
         {
             var outputs = new List<tOutputClause>();
@@ -114,6 +119,71 @@ namespace DecisionModelNotation
         {
             var regex = Regex.Match(cellValue, @"^[\[,\],]\s?(?<range1>\d+(\.\d+)?).{2}?(?<range2>\d+(\.\d+)?)[\[,\]]$");
             return regex.Success ? new[] { regex.Groups["range1"].Value, regex.Groups["range2"].Value } : null;
+        }
+
+
+        public static void GetDecisionsVariables(tDecision tdecision, string fileName, ref List<DmnDataDictionaryModel> dataDictionaryList)
+        {
+            var decisionId = tdecision.id;
+            
+            var decisionName = tdecision.name;
+            var decisionTable = (tDecisionTable)tdecision.Item;
+
+            foreach (var inputClause in decisionTable.input)
+            {
+                //add input variable name
+
+               
+                //var dictionary = AddVariablesToDictionary(fileName, decisionId, decisionName, inputClause.id, inputClause.label,inputClause.inputExpression.typeRef.Name, "input");
+                var dictionary = AddVariablesToDictionary(fileName, decisionId, decisionName, inputClause.inputExpression.Item.ToString(), inputClause.label,inputClause.inputExpression.typeRef.Name, "input");
+                dataDictionaryList.Add(dictionary);
+            }
+
+            foreach (var outputClause in decisionTable.output)
+            {
+                // Add Output variable name
+                var dictionary = AddVariablesToDictionary(fileName, decisionId, decisionName, outputClause.name, outputClause.label,
+                    outputClause.typeRef.Name, "output");
+                dataDictionaryList.Add(dictionary);
+            }
+        }
+
+        private static DmnDataDictionaryModel AddVariablesToDictionary(string fileName, string decisionId, string decisionName, string variableId, string variableName, string variableType, string type)
+        {
+            var dmnDataDictionaryModel = new DmnDataDictionaryModel
+            {
+                FilNavn = fileName,
+                DmnId = decisionId,
+                DmnNavn = decisionName,
+                VariabelId = variableId,
+                VariabelNavn = variableName,
+                VariabelType = variableType,
+                Type = type
+            };
+            return dmnDataDictionaryModel;
+        }
+
+        public static void GetDmnInfoFromBpmnModel(XDocument xmlBpmn, ref List<BpmnDataDictionaryModel> bpmnDataList)
+        {
+            var businessRuleTasks = xmlBpmn.Descendants()
+                .Where(x => x.Name.ToString().Contains("businessRuleTask"));
+            var process = xmlBpmn.Descendants()
+                .Single(x => x.Name.ToString().Contains("process"));
+
+            if (businessRuleTasks.Any())
+            {
+                foreach (XElement element in businessRuleTasks)
+                {
+                    bpmnDataList.Add(new BpmnDataDictionaryModel()
+                    {
+                        BpmnId = process.Attribute("id")?.Value,
+                        BpmnNavn = process.Attribute("name")?.Value,
+                        DmnId = element.Attributes().Single(a => a.Name.ToString().Contains("decisionRef"))?.Value,
+                        DmnNavn = element.Attribute("name")?.Value,
+                        DmnResultatvariabel = element.Attributes().Single(a => a.Name.ToString().Contains("resultVariable"))?.Value
+                    });
+                }
+            }
         }
     }
 }

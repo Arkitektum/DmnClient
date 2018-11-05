@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Xml.Linq;
 using System.Xml.Serialization;
 using DecisionModelNotation;
+using DecisionModelNotation.Models;
 using DecisionModelNotation.Shema;
 using Excel;
 using Microsoft.AspNetCore.Mvc;
@@ -71,6 +73,8 @@ namespace dmnClient.Controllers
                 {
                     Dictionary<int, Dictionary<string, object>> outputsRulesFromExcel = null;
                     Dictionary<int, Dictionary<string, object>> inputsRulsFromExcel = null;
+                    Dictionary<int, string> annotationsRulesDictionary = null;
+
                     Dictionary<int, string> outputsRulesTypes = null;
                     Dictionary<int, string> inputsRulesTypes = null;
                     Dictionary<string, Dictionary<string, string>> inputsDictionary = null;
@@ -96,6 +100,7 @@ namespace dmnClient.Controllers
                     {
                         outputsRulesFromExcel = new ExcelServices().GetRulesFromExcel(workSheet, outputsIndex, haveId);
                         inputsRulsFromExcel = new ExcelServices().GetRulesFromExcel(workSheet, inputsIndex, haveId);
+                        annotationsRulesDictionary =new ExcelServices().GetAnnotationsRulesFromExcel(workSheet, inputsIndex, outputsIndex,haveId);
                         outputsRulesTypes = new ExcelServices().GetRulesTypes(workSheet, outputsIndex, haveId);
                         inputsRulesTypes = new ExcelServices().GetRulesTypes(workSheet, inputsIndex, haveId);
                         inputsDictionary = new ExcelServices().GetExcelHeaderName(workSheet, inputsIndex, haveId);
@@ -121,7 +126,7 @@ namespace dmnClient.Controllers
                         .AddDecision(dmnId, dmnName, "decisionTable")
                         .AddInputsToDecisionTable(inputsDictionary, inputsRulesTypes)
                         .AddOutputsToDecisionTable(outputsDictionary, outputsRulesTypes)
-                        .AddDecisionRules(inputsRulsFromExcel, outputsRulesFromExcel)
+                        .AddDecisionRules(inputsRulsFromExcel, outputsRulesFromExcel, annotationsRulesDictionary)
                         .Build();
                     // Save DMN 
                     try
@@ -267,6 +272,184 @@ namespace dmnClient.Controllers
             }
             return Ok(okDictionary);
         }
+
+        //Data DIctionary
+        [HttpPost, Route("GetModelDataDictionaryToExcel")]
+        public IActionResult Post()
+        {
+            var httpRequest = HttpContext.Request;
+            HttpResponseMessage response = null;
+
+            string okResponsText = null;
+            var httpFiles = httpRequest.Form.Files;
+            var okDictionary = new Dictionary<string, string>();
+            var ErrorDictionary = new Dictionary<string, string>();
+            var dmnDataDictionaryModels = new List<DmnDataDictionaryModel>();
+            var bpmnDataDictionaryModels = new List<BpmnDataDictionaryModel>();
+            var dataDictionaryModels = new List<DataDictionaryModel>();
+
+            if (httpFiles == null && !httpFiles.Any())
+                return NotFound("Can't find any file");
+
+            for (var i = 0; i < httpFiles.Count; i++)
+            {
+                string errorResponsText = null;
+                string errorTemp = string.Empty;
+                var file = httpFiles[i];
+                tDefinitions dmn = null;
+                var fileExtention = Path.GetExtension(file.FileName);
+                if (fileExtention==".dmn")
+                {
+                    //Deserialize DMN file
+                    if (file != null)
+                    {
+                        using (Stream dmnfile = httpFiles[i].OpenReadStream())
+                        {
+                            dmn = new DmnServices().DeserializeStreamDmnFile(dmnfile);
+                        }
+                    }
+                    if (dmn == null)
+                    {
+                        ErrorDictionary.Add(file.FileName, "Can't validate Shema");
+                        continue;
+                    }
+                    // check if DMN have desicion table
+
+                    var items = dmn.Items;
+                    var decision = items.Where(t => t.GetType() == typeof(tDecision));
+                    var tDrgElements = decision as tDRGElement[] ?? decision.ToArray();
+                    if (!tDrgElements.Any())
+                    {
+                        ErrorDictionary.Add(file.FileName, "Dmn file have non decision");
+                        continue;
+                    }
+                    foreach (tDecision tdecision in decision)
+                    {
+                        tDecisionTable decisionTable = null;
+                        try
+                        {
+                            DmnServices.GetDecisionsVariables(tdecision, Path.GetFileNameWithoutExtension(file.FileName),
+                                ref dmnDataDictionaryModels);
+                        }
+                        catch
+                        {
+                            ErrorDictionary.Add(file.FileName, "Can't add serialize info from DMN");
+                        }
+                    }
+                }
+
+                if (fileExtention ==".bpmn")
+                {
+                    XDocument bpmnXml = null;
+                    try
+                    {
+                        using (Stream dmnfile = httpFiles[i].OpenReadStream())
+                        {
+                            bpmnXml = XDocument.Load(dmnfile);
+                        }
+                    }
+                    catch
+                    {
+                        ErrorDictionary.Add(file.FileName, "Can't add serialize bpmn to xml");
+                    }
+
+                    if (bpmnXml!= null)
+                    {
+                        try
+                        {
+                            DmnServices.GetDmnInfoFromBpmnModel(bpmnXml, ref bpmnDataDictionaryModels);
+                        }
+                        catch
+                        {
+                            ErrorDictionary.Add(file.FileName, "Can't add serialize bpmn to Data Model Dictionary");
+                        }
+                    }
+                }
+            }
+
+            foreach (var dmnDataInfo in dmnDataDictionaryModels)
+            { 
+                var submodel = new BpmnDataDictionaryModel();
+                try
+                {
+                    submodel = bpmnDataDictionaryModels.Single(b => b.DmnId == dmnDataInfo.DmnId);
+                }
+                catch
+                {
+                }
+                dataDictionaryModels.Add(new DataDictionaryModel()
+                {
+                    BpmnData = submodel,
+                    DmnData = dmnDataInfo
+                });
+
+            }
+
+
+
+
+            // create Excel Package
+            ExcelPackage excelPkg = null;
+            var fileName = "DataDictionaryFromModels";
+            try
+            {
+                excelPkg = new ExcelPackage();
+                ExcelWorksheet wsSheet = excelPkg.Workbook.Worksheets.Add("DmnTEK");
+                var dmnIds = dmnDataDictionaryModels.GroupBy(x => x.DmnId).Select(y => y.First());
+                var objectPropertyNames = new[] { "DmnId", "DmnNavn", "TekKapitel", "TekLedd", "TekTabell", "TekForskriften", "TekWebLink" };
+                ExcelServices.CreateDmnExcelTableDataDictionary(dmnIds, wsSheet, "dmnTek", objectPropertyNames);
+
+                ExcelWorksheet wsSheet1 = excelPkg.Workbook.Worksheets.Add("Variables");
+                var dmnVariablesIds = dmnDataDictionaryModels.GroupBy(x => x.VariabelId).Select(y => y.First());
+                var dmnVariablesIdstPropertyNames = new[] { "VariabelId", "VariabelNavn", "VariabelBeskrivelse" };
+                ExcelServices.CreateDmnExcelTableDataDictionary(dmnVariablesIds, wsSheet1, "Variables", dmnVariablesIdstPropertyNames);
+
+                ExcelWorksheet wsSheet2 = excelPkg.Workbook.Worksheets.Add("Dmn+Variables");
+                var objectPropertyNames1 = new[] { "DmnId", "VariabelId", "VariabelType" };
+                ExcelServices.CreateDmnExcelTableDataDictionary(dmnVariablesIds, wsSheet2, "Dmn+Variables", objectPropertyNames1);
+
+                ExcelWorksheet wsSheet3 = excelPkg.Workbook.Worksheets.Add("summary");
+                var summaryPropertyNames = new[] { "DmnData.FilNavn", "BpmnData.BpmnId", "DmnData.DmnId", "DmnData.VariabelId", "DmnData.VariabelType", "DmnData.Type", "DmnData.Kilde" };
+                ExcelServices.CreateSummaryExcelTableDataDictionary(dataDictionaryModels, wsSheet3, "summary", summaryPropertyNames);
+            }
+            catch
+            {
+                ErrorDictionary.Add("Error","Can't create Excel file");
+            }
+            // Save Excel Package
+            try
+            {
+                var path = Path.Combine(@"C:\", "DmnToExcel");
+                Directory.CreateDirectory(path);
+                excelPkg.SaveAs(new FileInfo(Path.Combine(path, string.Concat(fileName, ".xlsx"))));
+                okDictionary.Add(fileName, "Created in:" + path);
+            }
+            catch
+            {
+                ErrorDictionary.Add(fileName, "Can't be saved");
+            }
+
+            if (ErrorDictionary.Any())
+            {
+                if (okDictionary.Any())
+                {
+                    List<Dictionary<string, string>> dictionaries = new List<Dictionary<string, string>>();
+                    dictionaries.Add(okDictionary);
+                    dictionaries.Add(ErrorDictionary);
+                    var result = dictionaries.SelectMany(dict => dict)
+                        .ToLookup(pair => pair.Key, pair => pair.Value)
+                        .ToDictionary(group => group.Key, group => group.First());
+                    return Ok(result);
+                }
+                return BadRequest(ErrorDictionary);
+
+            }
+            return Ok(okDictionary);
+        }
+
+
+
+
 
         private static Dictionary<string, string[]> GetTablesIndex(ExcelTable table, string inputs, string outputs)
         {

@@ -19,20 +19,23 @@ namespace dmnClient.Test
         {
             var resourcePath = "dmnClient.Test.TestData.dmnTest1.xlsx";
             var assembly = Assembly.GetExecutingAssembly();
-            Stream resourceAsStream = assembly.GetManifestResourceStream(resourcePath);
+            ExcelPackage ep;
+            var name = string.Empty;
+            using (Stream resourceAsStream = assembly.GetManifestResourceStream(resourcePath))
+            {
+                
+                ep = new ExcelPackage(resourceAsStream);
+            }
 
-            var file = "dmnTest1.xlsx";
-            var savedFilePath = Path.Combine(Directory.GetCurrentDirectory() + @"..\..\..\..\TestData\", file);
-            //var savedFilePath = @"C:\Users\MatiasGonzalezTognon\Dropbox (Arkitektum AS)\Ark_prosjekter\DIBK\DigiTek\Brannteknisk prosjektering\DMN\Trinn1\ExcelFiles\13_OverflateKledning.xlsx";
-            var name = Path.GetFileNameWithoutExtension(savedFilePath);
-            var fi = new FileInfo(savedFilePath);
-            ExcelPackage ep = new ExcelPackage(new FileInfo(savedFilePath));
+            //var file = "dmnTest1.xlsx";
+            //var savedFilePath = Path.Combine(Directory.GetCurrentDirectory() + @"..\..\..\..\TestData\", file);
+            ////var savedFilePath = @"C:\Users\MatiasGonzalezTognon\Dropbox (Arkitektum AS)\Ark_prosjekter\DIBK\DigiTek\Brannteknisk prosjektering\DMN\Trinn1\ExcelFiles\13_OverflateKledning.xlsx";
+            //var name = Path.GetFileNameWithoutExtension(savedFilePath);
+            //var fi = new FileInfo(savedFilePath);
+            //ExcelPackage ep = new ExcelPackage(new FileInfo(savedFilePath));
 
-            ExcelPackage ep1 = new ExcelPackage(resourceAsStream);
-
-            //ExcelPackage ep = new ExcelPackage(new FileInfo(resourcePath));
             ExcelWorksheet workSheet = ep.Workbook.Worksheets.FirstOrDefault();
-            var table = ep1.Workbook.Worksheets.FirstOrDefault().Tables.FirstOrDefault();
+            var table = ep.Workbook.Worksheets.FirstOrDefault().Tables.FirstOrDefault();
 
             var columnsDictionary = ExcelServices.GetColumnRagngeInLeters(table, 4, 3);
             columnsDictionary.TryGetValue("outputsIndex", out var outputsIndex);
@@ -41,6 +44,7 @@ namespace dmnClient.Test
 
             var outputsRulesDictionary = new ExcelServices().GetRulesFromExcel(workSheet, outputsIndex, true);
             var inputsRulesDictionary = new ExcelServices().GetRulesFromExcel(workSheet, inputsIndex, true);
+            var annotationRulesDictionary = new ExcelServices().GetAnnotationsRulesFromExcel(workSheet, inputsIndex,outputsIndex,true);
             var outputsRulesTypes = new ExcelServices().GetRulesTypes(workSheet, outputsIndex, true);
             var inputsRulesTypes = new ExcelServices().GetRulesTypes(workSheet, inputsIndex, true);
             var inputsDictionary = new ExcelServices().GetExcelHeaderName(workSheet, inputsIndex, true);
@@ -55,7 +59,7 @@ namespace dmnClient.Test
                 .AddDecision(dmnId, dmnName, "decisionTable")
                 .AddInputsToDecisionTable(inputsDictionary, inputsRulesTypes)
                 .AddOutputsToDecisionTable(outputsDictionary, outputsRulesTypes)
-                .AddDecisionRules(inputsRulesDictionary, outputsRulesDictionary)
+                .AddDecisionRules(inputsRulesDictionary, outputsRulesDictionary, annotationRulesDictionary)
                 .Build();
 
             var dmnFile = string.Concat(@"c:\temp\", name, "_", ".dmn");
