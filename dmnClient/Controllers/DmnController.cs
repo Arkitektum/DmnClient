@@ -35,7 +35,7 @@ namespace dmnClient.Controllers
 
 
         [HttpPost, Route("excelToDmn/{inputs}/{outputs}/{haveId}")]
-        public ActionResult<string> Post(string inputs, string outputs, bool haveId)
+        public ActionResult<string> PostExcelToDmn(string inputs, string outputs, bool haveId)
         {
 
 
@@ -160,7 +160,7 @@ namespace dmnClient.Controllers
         }
 
         [HttpPost, Route("dmnToExcel")]
-        public IActionResult Pos()
+        public IActionResult PosDmnToExcel()
         {
             var httpRequest = HttpContext.Request;
             HttpResponseMessage response = null;
@@ -275,13 +275,14 @@ namespace dmnClient.Controllers
 
         //Data DIctionary
         [HttpPost, Route("GetModelDataDictionaryToExcel")]
-        public IActionResult Post()
+        public IActionResult PostModelsToExcelDataDictionary()
         {
             var httpRequest = HttpContext.Request;
             HttpResponseMessage response = null;
 
             string okResponsText = null;
             var httpFiles = httpRequest.Form.Files;
+            var httpForms = httpRequest.Form.Keys;
             var okDictionary = new Dictionary<string, string>();
             var ErrorDictionary = new Dictionary<string, string>();
             var dmnDataDictionaryModels = new List<DmnDataDictionaryModel>();
@@ -405,8 +406,8 @@ namespace dmnClient.Controllers
                 ExcelServices.CreateDmnExcelTableDataDictionary(dmnVariablesIds, wsSheet1, "Variables", dmnVariablesIdstPropertyNames);
 
                 ExcelWorksheet wsSheet2 = excelPkg.Workbook.Worksheets.Add("Dmn+Variables");
-                var objectPropertyNames1 = new[] { "DmnId", "VariabelId", "VariabelType" };
-                ExcelServices.CreateDmnExcelTableDataDictionary(dmnVariablesIds, wsSheet2, "Dmn+Variables", objectPropertyNames1);
+                var objectPropertyNames1 = new[] { "DmnId", "VariabelId", "Type" };
+                ExcelServices.CreateDmnExcelTableDataDictionary(dmnDataDictionaryModels, wsSheet2, "Dmn+Variables", objectPropertyNames1);
 
                 ExcelWorksheet wsSheet3 = excelPkg.Workbook.Worksheets.Add("summary");
                 var summaryPropertyNames = new[] { "DmnData.FilNavn", "BpmnData.BpmnId", "DmnData.DmnId", "DmnData.VariabelId", "DmnData.VariabelType", "DmnData.Type", "DmnData.Kilde" };
