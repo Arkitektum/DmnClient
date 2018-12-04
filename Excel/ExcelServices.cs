@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Dynamic;
@@ -154,10 +154,13 @@ namespace Excel
 
                 foreach (var outputClause in decisionTable.output)
                 {
+
+
                     table.Columns[i].Name = outputClause.label;
 
-                    // Add Output variable name
-                    AddExcelCellByRowAndColumn(stratColumn + i, stratRow + 1, outputClause.name, wsSheet, color);
+                    // Add Output variableId name
+                    var variableId = outputClause.name ?? "";
+                    AddExcelCellByRowAndColumn(stratColumn + i, stratRow + 1, variableId, wsSheet, color);
 
                     i++;
                 }
@@ -389,7 +392,8 @@ namespace Excel
             var dictionary = new Dictionary<string, string[]>();
             var start = table.Address.Start.Column;
             var end = table.Address.End.Column;
-            if ((inputsColumnsCount + outputsColumnsCount) > (end - start))
+
+            if ((inputsColumnsCount + outputsColumnsCount) > (end -(start-1)))
                 return null;
             var outputsStart = start + inputsColumnsCount;
             var inputsColumnIndexes = new List<string>();
