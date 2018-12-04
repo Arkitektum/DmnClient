@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Dynamic;
@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using DecisionModelNotation;
 using DecisionModelNotation.Models;
 using DecisionModelNotation.Shema;
+using Newtonsoft.Json;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Table;
@@ -508,8 +509,8 @@ namespace Excel
             for (int i = 0; i < dmnFields.Length; i++)
             {
                 var value = GetPropertyStringValue(modelData, dmnFields[i]);
-                    AddExcelCellByRowAndColumn(dataColumn, dataRow, value, wsSheet);
-                    dataColumn++;
+                AddExcelCellByRowAndColumn(dataColumn, dataRow, value, wsSheet);
+                dataColumn++;
             }
         }
 
@@ -540,6 +541,39 @@ namespace Excel
             {
                 table.Columns[i].Name = name[i];
             }
+        }
+
+        public string ExcelToJsonObject(ExcelPackage ep, string sheetName)
+        {
+
+            ExcelWorksheet ws = ep.Workbook.Worksheets[sheetName];
+            if (ws == null) return String.Empty;
+            var table = ws.Tables.FirstOrDefault();
+
+            var jsonList = new List<object>();
+
+
+            var startColumn = table.Address.Start.Column;
+            var startRow = table.Address.Start.Row;
+            var dictionaryList = new List<Dictionary<string, string>>();
+
+            for (int i = startRow + 1; i <= table.Address.End.Row; i++)
+            {
+                var valuesDictionary = new Dictionary<string, string>();
+                for (int j = startColumn; j <= table.Address.End.Column; j++)
+                {
+                    var cellName = string.Concat(GetColumnName(j), i);
+                    var objectValue = ws.Cells[cellName].Value;
+                    var objectName = ws.Cells[string.Concat(GetColumnName(j), startRow)].Value;
+                    valuesDictionary.Add(objectName.ToString(), objectValue?.ToString());
+                }
+                dictionaryList.Add(valuesDictionary);
+            }
+
+            var jsonArray = JsonConvert.SerializeObject(dictionaryList.ToArray());
+
+            return jsonArray;
+
         }
     }
 }
