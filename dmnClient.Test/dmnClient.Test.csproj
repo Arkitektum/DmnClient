@@ -7,10 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="TestData\DataDictionaryFromModels.xlsx" />
     <None Remove="TestData\dmnTest1.xlsx" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="TestData\DataDictionaryFromModels.xlsx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <EmbeddedResource Include="TestData\dmnTest1.xlsx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
@@ -29,6 +33,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DecisionModelNotation\DecisionModelNotation.csproj" />
+    <ProjectReference Include="..\dmnClient\dmnClient.csproj" />
     <ProjectReference Include="..\Excel\Excel.csproj" />
   </ItemGroup>
 

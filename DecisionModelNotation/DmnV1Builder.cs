@@ -96,11 +96,10 @@ namespace DecisionModelNotation
             return this;
         }
 
-        public DmnV1Builder AddDecisionRules(Dictionary<int, Dictionary<string, object>> inputsRulesDictionary, Dictionary<int, Dictionary<string, object>> outputsRulesDictionary)
+        public DmnV1Builder AddDecisionRules(Dictionary<int, Dictionary<string, object>> inputsRulesDictionary, Dictionary<int, Dictionary<string, object>> outputsRulesDictionary, Dictionary<int,string> annotationDictionary)
         {
             var decision = _dmn.Items.FirstOrDefault(i => i is tDecision);
             var decisionTable = (tDecisionTable)((tDecision)decision)?.Item;
-
 
             var startKey = inputsRulesDictionary.FirstOrDefault().Key;
             var endKey = inputsRulesDictionary.Last().Key;
@@ -116,6 +115,7 @@ namespace DecisionModelNotation
                 var decisionRule = new tDecisionRule()
                 {
                     id = string.Concat("rowRule_", i),
+                    description = GetAnnotation(annotationDictionary, i),
                     inputEntry =
                         CreateInputsRules(inputsRowRuleDictionary),
                     outputEntry =
@@ -126,6 +126,12 @@ namespace DecisionModelNotation
 
             decisionTable.rule = decisionRules.ToArray();
             return this;
+        }
+
+        private string GetAnnotation(Dictionary<int, string> annotationDictionary, int i)
+        {
+            annotationDictionary.TryGetValue(i, out var value);
+            return value;
         }
 
         private tLiteralExpression[] CreateOutputsRules(Dictionary<string, object> value)
@@ -147,7 +153,7 @@ namespace DecisionModelNotation
                 //{
                 //    rule.Item = output.Value;
                 //}
-                rule.Item = GetValueParse(output.Value.ToString());
+                rule.Item = output.Value !=null ? GetValueParse(output.Value.ToString()): output.Value;
                 outputsRules.Add(rule);
             }
 
