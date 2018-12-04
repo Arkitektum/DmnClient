@@ -105,8 +105,8 @@ namespace dmnClient.Test
             ExcelServices.CreateDmnExcelTableDataDictionary(dmnVariablesIds, wsSheet1, "Variables", dmnVariablesIdstPropertyNames);
 
             ExcelWorksheet wsSheet2 = excelPkg.Workbook.Worksheets.Add("Dmn+Variables");
-            var objectPropertyNames1 = new[] { "DmnId", "VariabelId", "VariabelType" };
-            ExcelServices.CreateDmnExcelTableDataDictionary(dmnVariablesIds, wsSheet2, "Dmn+Variables", objectPropertyNames1);
+            var objectPropertyNames1 = new[] { "DmnId", "VariabelId", "Type" };
+            ExcelServices.CreateDmnExcelTableDataDictionary(dmnDataDictionaryModels, wsSheet2, "Dmn+Variables", objectPropertyNames1);
 
 
             ExcelWorksheet wsSheet3 = excelPkg.Workbook.Worksheets.Add("summary");
