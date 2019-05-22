@@ -147,8 +147,7 @@ namespace Excel
                     table.Columns[i].Name = inputClause.label;
 
                     //add input variable name
-                    AddExcelCellByRowAndColumn(stratColumn + i, stratRow + 1,
-                        inputClause.inputExpression.Item.ToString(), wsSheet, color);
+                    AddExcelCellByRowAndColumn(stratColumn + i, stratRow + 1,inputClause.inputExpression?.Item?.ToString(), wsSheet, color);
 
                     i++;
                 }
@@ -193,7 +192,7 @@ namespace Excel
                 // set Output result content
                 foreach (var literalExpression in rule.outputEntry)
                 {
-                    AddExcelCellByRowAndColumn(outputColumn, row, literalExpression.Item.ToString(), wsSheet);
+                    AddExcelCellByRowAndColumn(outputColumn, row, literalExpression.Item?.ToString(), wsSheet);
                     outputColumn++;
                 }
 
